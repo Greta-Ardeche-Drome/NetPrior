@@ -68,7 +68,6 @@ def list_network_adapters():
 def get_network_bandwidth():
     """
     Demande à l'utilisateur de choisir une carte réseau pour tester la bande passante.
-    Utilise speedtest-cli pour mesurer la vitesse de connexion internet.
     """
     try:
         print(Fore.BLUE + "📶 Mesure de la bande passante en cours..." + Style.RESET_ALL)
@@ -79,7 +78,7 @@ def get_network_bandwidth():
         
         print("\nCartes réseau disponibles :")
         for idx, adapter in enumerate(adapters, start=1):
-            print(Fore.CYAN + f"{idx} - {adapter}" + Style.RESET_ALL)1
+            print(Fore.CYAN + f"{idx} - {adapter}" + Style.RESET_ALL)
         
         choice = int(input(Fore.BLUE + "\nEntrez le numéro de la carte réseau pour le test : " + Style.RESET_ALL).strip())
         if not (1 <= choice <= len(adapters)):
@@ -89,48 +88,31 @@ def get_network_bandwidth():
         selected_adapter = adapters[choice - 1]
         print(Fore.GREEN + f"\nInterface sélectionnée : {selected_adapter}" + Style.RESET_ALL)
         
-        # Vérifier si speedtest-cli est installé, sinon l'installer
-        try:
-            import speedtest
-        except ImportError:
-            print(Fore.YELLOW + "⚠ Module speedtest-cli non trouvé. Installation en cours..." + Style.RESET_ALL)
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "speedtest-cli"])
-            import speedtest
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        speedtest_path = os.path.join(base_dir, "speedtest", "speedtest.exe")
         
-        print(Fore.BLUE + "Exécution du test de vitesse... Cela peut prendre quelques secondes." + Style.RESET_ALL)
+        print(Fore.BLUE + "Exécution de Speedtest CLI... Cela peut prendre quelques secondes." + Style.RESET_ALL)
         
-        # Créer l'objet Speedtest
-        st = speedtest.Speedtest()
+        result = subprocess.run([speedtest_path, "--format", "json"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
-        # Trouver le meilleur serveur
-        print(Fore.CYAN + "Recherche du meilleur serveur..." + Style.RESET_ALL)
-        st.get_best_server()
+        if result.returncode != 0:
+            raise Exception(Fore.RED + result.stderr.strip() + Style.RESET_ALL)
         
-        # Mesurer la vitesse de téléchargement
-        print(Fore.CYAN + "Mesure de la vitesse de téléchargement..." + Style.RESET_ALL)
-        download_speed = st.download() / 1_000_000  # Convertir en Mbps
-        
-        # Mesurer la vitesse d'envoi
-        print(Fore.CYAN + "Mesure de la vitesse d'envoi..." + Style.RESET_ALL)
-        upload_speed = st.upload() / 1_000_000  # Convertir en Mbps
-        
-        # Mesurer la latence (ping)
-        latency = st.results.ping
+        data = json.loads(result.stdout)
+        download_speed = data["download"]["bandwidth"] * 8 / 1_000_000  # Convertir en Mbps
+        upload_speed = data["upload"]["bandwidth"] * 8 / 1_000_000  # Convertir en Mbps
         
         print(Fore.GREEN + f"📥 Débit descendant (Download) : {round(download_speed, 2)} Mbps" + Style.RESET_ALL)
         print(Fore.GREEN + f"📤 Débit montant (Upload) : {round(upload_speed, 2)} Mbps" + Style.RESET_ALL)
-        print(Fore.GREEN + f"🔄 Latence (Ping) : {round(latency, 2)} ms" + Style.RESET_ALL)
         
         return {
             "adapter": selected_adapter,
             "download_mbps": round(download_speed, 2),
-            "upload_mbps": round(upload_speed, 2),
-            "latency_ms": round(latency, 2)
+            "upload_mbps": round(upload_speed, 2)
         }
     except Exception as e:
         print(Fore.RED + f"❌ Erreur lors de la mesure de la bande passante : {e}" + Style.RESET_ALL)
         return {}
-
 def get_app_path(app_name):
     """
     Recherche et retourne le chemin complet d'un exécutable en fonction de son nom.
