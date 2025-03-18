@@ -79,7 +79,7 @@ def get_network_bandwidth():
         
         print("\nCartes réseau disponibles :")
         for idx, adapter in enumerate(adapters, start=1):
-            print(Fore.CYAN + f"{idx} - {adapter}" + Style.RESET_ALL)
+            print(Fore.CYAN + f"{idx} - {adapter}" + Style.RESET_ALL)1
         
         choice = int(input(Fore.BLUE + "\nEntrez le numéro de la carte réseau pour le test : " + Style.RESET_ALL).strip())
         if not (1 <= choice <= len(adapters)):
