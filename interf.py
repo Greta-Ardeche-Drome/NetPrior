@@ -5,7 +5,14 @@ import sys
 import time
 import threading
 import platform
-
+import os
+import json
+import subprocess
+import threading
+from tkinter import messagebox
+from colorama import Fore, Style
+import builtins
+from RecupInfos.fonctionsRecupInfos import(list_user_launched_applications,list_network_adapters,get_network_bandwidth,list_user_launched_applications,get_app_path)
 # Ajouter les chemins des autres modules
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.extend([
@@ -392,38 +399,64 @@ class NetPriorApp:
             messagebox.showwarning("Attention", "Veuillez sélectionner une interface réseau.")
             return
         
-        # Obtenir l'interface sélectionnée
-        adapter = self.network_listbox.get(selection[0])
+        # Obtenir l'index de l'interface sélectionnée (1-based comme dans list_network_adapters)
+        adapter_index = selection[0] + 1
+        
+        # Obtenir le nom de l'interface
+        selected_adapter = self.network_listbox.get(selection[0])
         
         # Lancer le test dans un thread séparé
-        self.update_status(f"Test de bande passante sur {adapter}...")
+        self.update_status(f"Test de bande passante sur {selected_adapter}...")
         self.progress.start()
         
         def run_test():
             try:
-                # Simuler un test de bande passante (à remplacer par l'appel réel)
-                bandwidth_info = get_network_bandwidth()
+                # Importer la fonction
+                from RecupInfos.fonctionsRecupInfos import get_network_bandwidth
                 
-                # Mettre à jour l'interface utilisateur
-                self.root.after(0, lambda: self.update_bandwidth_results(bandwidth_info))
+                # Stocker l'original input
+                original_input = builtins.input
+                
+                # Définir une fonction qui retourne automatiquement l'index sélectionné
+                def auto_select_interface(prompt):
+                    if "Entrez le numéro de la carte réseau" in prompt:
+                        return str(adapter_index)
+                    return original_input(prompt)
+                
+                # Remplacer input par notre fonction
+                builtins.input = auto_select_interface
+                
+                try:
+                    # Appeler get_network_bandwidth
+                    result = get_network_bandwidth()
+                    
+                    # Mettre à jour l'interface avec les résultats
+                    self.root.after(0, lambda: self.update_bandwidth_results(result))
+                finally:
+                    # Restaurer l'input original
+                    builtins.input = original_input
+                
             except Exception as e:
+                import traceback
+                print(f"Exception: {str(e)}")
+                print(traceback.format_exc())
                 self.root.after(0, lambda: messagebox.showerror("Erreur", f"Test de bande passante échoué : {e}"))
                 self.root.after(0, lambda: self.update_status("Erreur lors du test de bande passante."))
             finally:
                 self.root.after(0, self.progress.stop)
         
-        threading.Thread(target=run_test).start()
-
+        threading.Thread(target=run_test).start()    
     def update_bandwidth_results(self, results):
         """Met à jour l'affichage des résultats de bande passante"""
-        if results and "download_mbps" in results and "upload_mbps" in results:
-            self.down_value.config(text=f"{results['download_mbps']} Mbps")
-            self.up_value.config(text=f"{results['upload_mbps']} Mbps")
+        if results:
+            self.down_value.config(text=f"{results.get('download_mbps', 'N/A')} Mbps")
+            self.up_value.config(text=f"{results.get('upload_mbps', 'N/A')} Mbps")
             self.update_status("Test de bande passante terminé.")
         else:
             self.down_value.config(text="N/A")
             self.up_value.config(text="N/A")
             self.update_status("Aucun résultat de test disponible.")
+    
 
     def update_status(self, message):
         """Met à jour la barre de statut"""

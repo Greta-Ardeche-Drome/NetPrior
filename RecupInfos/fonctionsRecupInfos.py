@@ -65,9 +65,12 @@ def list_network_adapters():
         print(Fore.RED + f"❌ Erreur lors de la récupération des interfaces réseau : {e}" + Style.RESET_ALL)
         return []
 
-def get_network_bandwidth():
+def get_network_bandwidth(selected_adapter_index=None):
     """
-    Demande à l'utilisateur de choisir une carte réseau pour tester la bande passante.
+    Mesure la bande passante d'une carte réseau.
+    
+    Args:
+        selected_adapter_index (int, optional): Index de l'adaptateur à utiliser. Si None, demande à l'utilisateur.
     """
     try:
         print(Fore.BLUE + "📶 Mesure de la bande passante en cours..." + Style.RESET_ALL)
@@ -76,11 +79,16 @@ def get_network_bandwidth():
             print(Fore.YELLOW + "⚠ Aucune interface réseau disponible." + Style.RESET_ALL)
             return {}
         
-        print("\nCartes réseau disponibles :")
-        for idx, adapter in enumerate(adapters, start=1):
-            print(Fore.CYAN + f"{idx} - {adapter}" + Style.RESET_ALL)
-        
-        choice = int(input(Fore.BLUE + "\nEntrez le numéro de la carte réseau pour le test : " + Style.RESET_ALL).strip())
+        # Si l'index n'est pas fourni, demander à l'utilisateur
+        if selected_adapter_index is None:
+            print("\nCartes réseau disponibles :")
+            for idx, adapter in enumerate(adapters, start=1):
+                print(Fore.CYAN + f"{idx} - {adapter}" + Style.RESET_ALL)
+            
+            choice = int(input(Fore.BLUE + "\nEntrez le numéro de la carte réseau pour le test : " + Style.RESET_ALL).strip())
+        else:
+            choice = selected_adapter_index
+            
         if not (1 <= choice <= len(adapters)):
             print(Fore.RED + "❌ Choix invalide." + Style.RESET_ALL)
             return {}
@@ -88,6 +96,7 @@ def get_network_bandwidth():
         selected_adapter = adapters[choice - 1]
         print(Fore.GREEN + f"\nInterface sélectionnée : {selected_adapter}" + Style.RESET_ALL)
         
+        # Le reste de votre code de test speedtest reste inchangé
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         speedtest_path = os.path.join(base_dir, "speedtest", "speedtest.exe")
         
