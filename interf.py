@@ -398,18 +398,21 @@ class NetPriorApp(QMainWindow):
         """)
         apps_layout.addWidget(self.apps_list)
         
-        # Bouton d'ajout
-        add_button = QPushButton("+ Ajouter")
-        add_button.setStyleSheet("""
+        # Bouton d'actualisation
+        refresh_button = QPushButton("⟳ Actualiser")
+        refresh_button.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
                 padding: 10px;
                 font-weight: bold;
             }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
         """)
-        add_button.clicked.connect(self.add_application)
-        apps_layout.addWidget(add_button)
+        refresh_button.clicked.connect(self.refresh_apps_list)
+        apps_layout.addWidget(refresh_button)
         
         # Statistiques réseau avec bouton de test - Couleur de fond corrigée
         stats_container = QWidget()
