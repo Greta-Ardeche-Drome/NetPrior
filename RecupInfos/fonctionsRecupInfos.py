@@ -12,6 +12,7 @@ import requests
 def list_user_launched_applications(display=True):
     """
     Liste les applications utilisateur lancées sur Windows en utilisant PowerShell.
+    Regroupe les applications identiques pour n'afficher qu'une seule entrée par application.
     """
     try:
         print(Fore.BLUE + "🔍 Recherche des applications utilisateur..." + Style.RESET_ALL)
@@ -27,12 +28,22 @@ def list_user_launched_applications(display=True):
         if result.returncode != 0:
             raise Exception(Fore.RED + f"Erreur PowerShell : {result.stderr.strip()}" + Style.RESET_ALL)
         
-        app_list = []
+        # Dictionnaire pour stocker les applications uniques
+        unique_apps = {}
+        
         lines = result.stdout.strip().splitlines()
-        for line in lines[3:]:
+        for line in lines[3:]:  # Ignorer les en-têtes (3 premières lignes)
             parts = line.split()
             if len(parts) >= 2:
-                app_list.append({"ProcessName": " ".join(parts[1:]), "ProcessId": parts[0]})
+                process_id = parts[0]
+                process_name = " ".join(parts[1:])
+                
+                # Si l'application n'a pas déjà été ajoutée, l'ajouter
+                if process_name not in unique_apps:
+                    unique_apps[process_name] = process_id
+        
+        # Créer la liste des applications à partir du dictionnaire
+        app_list = [{"ProcessName": name, "ProcessId": pid} for name, pid in unique_apps.items()]
         
         if display:
             table = PrettyTable()
@@ -44,7 +55,6 @@ def list_user_launched_applications(display=True):
     except Exception as e:
         print(Fore.RED + f"❌ Erreur lors de la récupération des applications utilisateur : {e}" + Style.RESET_ALL)
         return []
-
 def list_network_adapters():
     """
     Liste toutes les interfaces réseau disponibles sur le système.
