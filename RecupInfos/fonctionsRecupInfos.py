@@ -11,49 +11,99 @@ import sys
 import requests
 def list_user_launched_applications(display=True):
     """
-    Liste les applications utilisateur lancées sur Windows en utilisant PowerShell.
+    Liste les applications utilisateur lancées sur Windows en utilisant PowerShell,
+    ainsi que les processus système susceptibles de consommer de la bande passante.
     Regroupe les applications identiques pour n'afficher qu'une seule entrée par application.
+    
+    Args:
+        display (bool): Si True, affiche le résultat dans la console.
+    
+    Returns:
+        list: Liste des applications et processus sous forme de dictionnaire.
     """
     try:
-        print(Fore.BLUE + "🔍 Recherche des applications utilisateur..." + Style.RESET_ALL)
-        command = """
+        print(Fore.BLUE + "🔍 Recherche des applications et processus réseau..." + Style.RESET_ALL)
+        
+        # 1. Récupération des applications utilisateur
+        user_apps_command = """
         Get-Process | Where-Object {
             ($_.MainWindowHandle -ne 0) -and 
             ($_.StartInfo.UserName -notmatch '^(NT AUTHORITY|SYSTEM|LOCAL SERVICE|NETWORK SERVICE)$') -and 
             ($_.MainWindowTitle -ne "")
         } | Select-Object -Property Id, ProcessName | Sort-Object -Property ProcessName
         """
-        result = subprocess.run(["powershell", "-Command", command], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        user_result = subprocess.run(["powershell", "-Command", user_apps_command], 
+                                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
-        if result.returncode != 0:
-            raise Exception(Fore.RED + f"Erreur PowerShell : {result.stderr.strip()}" + Style.RESET_ALL)
+        if user_result.returncode != 0:
+            raise Exception(Fore.RED + f"Erreur PowerShell (applications utilisateur) : {user_result.stderr.strip()}" + Style.RESET_ALL)
         
-        # Dictionnaire pour stocker les applications uniques
-        unique_apps = {}
+        # 2. Récupération des processus système consommant de la bande passante
+        # Liste des processus système connus pour utiliser la bande passante
+        network_processes_command = """
+        Get-Process -Name svchost, System, lsass, services, spoolsv, wininit, csrss, explorer, 
+                         MsMpEng, OneDrive, Teams, Skype, Discord, Slack, Chrome, Edge, Firefox, 
+                         iexplore, Opera, Zoom, msedge, Dropbox, GoogleDrive, SynologyDrive, 
+                         Outlook, Thunderbird -ErrorAction SilentlyContinue | 
+        Where-Object { $_.Id -ne $null } | 
+        Select-Object -Property Id, ProcessName | 
+        Sort-Object -Property ProcessName
+        """
         
-        lines = result.stdout.strip().splitlines()
-        for line in lines[3:]:  # Ignorer les en-têtes (3 premières lignes)
+        sys_result = subprocess.run(["powershell", "-Command", network_processes_command], 
+                               text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Ne pas lever d'exception si aucun processus système n'est trouvé
+        
+        # Dictionnaires pour stocker les applications uniques
+        unique_user_apps = {}
+        unique_system_processes = {}
+        
+        # Traitement des applications utilisateur
+        user_lines = user_result.stdout.strip().splitlines()
+        for line in user_lines[3:]:  # Ignorer les en-têtes
             parts = line.split()
             if len(parts) >= 2:
                 process_id = parts[0]
                 process_name = " ".join(parts[1:])
                 
-                # Si l'application n'a pas déjà été ajoutée, l'ajouter
-                if process_name not in unique_apps:
-                    unique_apps[process_name] = process_id
+                if process_name not in unique_user_apps:
+                    unique_user_apps[process_name] = process_id
         
-        # Créer la liste des applications à partir du dictionnaire
-        app_list = [{"ProcessName": name, "ProcessId": pid} for name, pid in unique_apps.items()]
+        # Traitement des processus système
+        if sys_result.returncode == 0:
+            sys_lines = sys_result.stdout.strip().splitlines()
+            for line in sys_lines[3:]:  # Ignorer les en-têtes
+                parts = line.split()
+                if len(parts) >= 2:
+                    process_id = parts[0]
+                    process_name = " ".join(parts[1:])
+                    
+                    # Éviter les doublons avec les applications utilisateur
+                    if process_name not in unique_user_apps and process_name not in unique_system_processes:
+                        unique_system_processes[process_name] = process_id
+        
+        # Créer les listes d'applications
+        user_app_list = [{"ProcessName": name, "ProcessId": pid, "Type": "user"} 
+                        for name, pid in unique_user_apps.items()]
+        
+        system_app_list = [{"ProcessName": name, "ProcessId": pid, "Type": "system"} 
+                          for name, pid in unique_system_processes.items()]
+        
+        # Combiner les deux listes
+        app_list = user_app_list + system_app_list
         
         if display:
             table = PrettyTable()
-            table.field_names = ["N°", "Nom de l'application", "PID"]
+            table.field_names = ["N°", "Nom de l'application", "PID", "Type"]
             for idx, app in enumerate(app_list, start=1):
-                table.add_row([idx, app["ProcessName"], app["ProcessId"]])
+                app_type = "Utilisateur" if app["Type"] == "user" else "Système"
+                table.add_row([idx, app["ProcessName"], app["ProcessId"], app_type])
             print(Fore.GREEN + str(table) + Style.RESET_ALL)
+        
         return app_list
     except Exception as e:
-        print(Fore.RED + f"❌ Erreur lors de la récupération des applications utilisateur : {e}" + Style.RESET_ALL)
+        print(Fore.RED + f"❌ Erreur lors de la récupération des applications : {e}" + Style.RESET_ALL)
         return []
 def list_network_adapters():
     """
