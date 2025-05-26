@@ -5,17 +5,41 @@ import subprocess  # Module pour exécuter des commandes système
 from prettytable import PrettyTable  # Module pour formater les tableaux en console
 from colorama import Fore, Style  # Module pour ajouter des couleurs au texte
 import sys
+
+# Correction des chemins d'imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+
+# Ajouter les chemins correctement
 sys.path.extend([
-    os.path.abspath('../RecupInfos'),
-    os.path.abspath('../InfoQOS'),
-    os.path.abspath('../AutreRepertoire'),
-    os.path.abspath('../CreationRegleQOS'),
-    os.path.abspath('../SupressionRegleQOS')
+    os.path.join(parent_dir, 'RecupInfos'),
+    os.path.join(parent_dir, 'InfoQOS'),
+    os.path.join(parent_dir, 'CreationRegleQOS'),
+    os.path.join(parent_dir, 'SuppressionRegleQOS')
 ])
-from RecupInfos.fonctionsRecupInfos import(list_user_launched_applications,list_network_adapters,get_network_bandwidth,list_user_launched_applications,get_app_path)
-from InfoQOS.PolicyQOS import (verifier_regle_qos,show_qos_policies,get_qos_policies)
-from CreationRegleQOS.CreateQOS import (limit_application_bandwidth)
-from SuppressionRegleQOS.FonctionsDeleteQOS import (remove_bandwidth_limit,handle_remove_qos_rule,)
+
+# Maintenant faire les imports
+try:
+    from RecupInfos.fonctionsRecupInfos import (
+        list_user_launched_applications,
+        list_network_adapters,
+        get_network_bandwidth,
+        get_app_path
+    )
+    from InfoQOS.PolicyQOS import (
+        verifier_regle_qos,
+        show_qos_policies,
+        get_qos_policies
+    )
+    from CreationRegleQOS.CreateQOS import limit_application_bandwidth
+    from SuppressionRegleQOS.FonctionsDeleteQOS import (
+        remove_bandwidth_limit,
+        handle_remove_qos_rule
+    )
+except ImportError as e:
+    print(f"Erreur d'import: {e}")
+    print("Vérifiez que tous les fichiers sont présents dans les bons dossiers")
+    sys.exit(1)
 
 # ================================
 # Fonction pour afficher la bannière stylisée façon "hacking"
