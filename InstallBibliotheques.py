@@ -3,27 +3,32 @@ import sys
 
 # Liste des bibliothèques nécessaires
 REQUIRED_LIBRARIES = [
-    "colorama",         # Ajout de couleurs dans le terminal
-    "prettytable",      # Affichage de tableaux
-    "psutil",           # Gestion des processus système
-    "pyfiglet",         # Affichage ASCII Art du titre
-    "json",             # Manipulation de données JSON
+    "colorama",
+    "prettytable", 
+    "psutil",
+    "pyfiglet",
+    "speedtest-cli",
+    "requests"
 ]
 
 def install_packages():
     """
-    Vérifie et installe les bibliothèques nécessaires dynamiquement.
+    Installe toutes les bibliothèques nécessaires.
     """
+    print("🚀 Installation des bibliothèques NetPrior...\n")
+    
     for package in REQUIRED_LIBRARIES:
         try:
-            # Vérifie si le package est déjà installé
-            __import__(package)
-            print(f"✅ {package} est déjà installé.")
-        except ImportError:
             print(f"📦 Installation de {package}...")
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-    print("\n✅ Toutes les bibliothèques sont installées et à jour.")
+            print(f"✅ {package} installé avec succès.\n")
+        except subprocess.CalledProcessError:
+            print(f"❌ Erreur lors de l'installation de {package}.\n")
+    
+    print("🎉 Installation terminée !")
+    print("\nPour utiliser NetPrior :")
+    print("- Interface CLI : python main.py")
+    print("- Interface GUI : python interf.py")
 
 if __name__ == "__main__":
     install_packages()
