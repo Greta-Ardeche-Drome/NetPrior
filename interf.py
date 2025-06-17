@@ -38,6 +38,34 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
 from PyQt5.QtGui import QFont, QColor, QIcon, QPainter, QPen, QBrush, QLinearGradient, QPainterPath, QPixmap
 from PyQt5.QtCore import Qt, QSize, QTimer, pyqtSignal, QObject, QRunnable, QThreadPool, QMetaObject, Q_ARG
 
+
+
+def patch_subprocess_for_gui():
+    """
+    Patche subprocess.run pour masquer automatiquement les fenêtres sous Windows
+    quand on est dans une interface graphique
+    """
+    if platform.system() == "Windows":
+        # Sauvegarder la fonction originale
+        original_run = subprocess.run
+        
+        def silent_run(*args, **kwargs):
+            # Ajouter automatiquement les paramètres pour masquer les fenêtres
+            if 'startupinfo' not in kwargs:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                kwargs['startupinfo'] = startupinfo
+            
+            if 'creationflags' not in kwargs:
+                kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+            
+            return original_run(*args, **kwargs)
+        
+        # Remplacer subprocess.run par notre version silencieuse
+        subprocess.run = silent_run
+        print("✅ Patch subprocess appliqué - Les fenêtres PowerShell seront masquées")
+
 # Définition des couleurs
 DARK_BLUE = "#2c3e50"
 LIGHT_BLUE = "#3498db"
@@ -61,6 +89,7 @@ SPECIFIC_SYSTEM_PROCESSES = [
     "explorer.exe",
     "msedge.exe"
 ]
+
 
 class WorkerSignals(QObject):
     """
