@@ -37,7 +37,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QLineEdit)
 from PyQt5.QtGui import QFont, QColor, QIcon, QPainter, QPen, QBrush, QLinearGradient, QPainterPath, QPixmap
 from PyQt5.QtCore import Qt, QSize, QTimer, pyqtSignal, QObject, QRunnable, QThreadPool, QMetaObject, Q_ARG
-
+from RecupInfos.fonctionsRecupInfos import get_friendly_name
 
 
 def patch_subprocess_for_gui():
@@ -951,97 +951,88 @@ class NetPriorApp(QMainWindow):
         self.threadpool.start(worker)
     
     def update_user_apps_list(self, apps_data):
-        """Met à jour la liste des applications utilisateur"""
-        # Effacer la liste actuelle
+        """Met à jour la liste en excluant Realtek Audio et Saisie de texte Windows"""
         self.apps_list.clear()
         
-        # Si aucune application n'est trouvée
         if not apps_data:
             self.statusBar().showMessage("Aucune application utilisateur trouvée.")
             self.apps_progress.setVisible(False)
             self.apps_count_label.setText("0 applications")
             return
         
-        # Liste des applications à afficher, correspondant à l'image la plus récente
-        sample_apps = [
-            "Code",
-            "Discord",
-            "Everything",
-            "firefox",
-            "GitHubDesktop",
-            "NLClientApp",
-            "Photos",
-            "ProtonVPN",
-            "python3.11"
-        ]
+        # ✅ EXCLURE SEULEMENT CES DEUX APPLICATIONS
+        excluded_apps = ['rtkuwp', 'textinputhost']
         
-        # Stocker les applications pour le filtrage
-        self.all_user_apps = apps_data
+        # Filtrer les applications
+        user_apps_filtered = []
+        for app in apps_data:
+            if app.get("Type") == "user":
+                process_name = app['ProcessName'].lower()
+                
+                # Exclure seulement Realtek Audio et Saisie de texte
+                should_exclude = any(excluded.lower() in process_name 
+                                for excluded in excluded_apps)
+                
+                if not should_exclude:
+                    user_apps_filtered.append(app)
         
-        # Si nous n'avons pas assez d'applications, utiliser les exemples
-        if len(apps_data) < 8:
-            for app_name in sample_apps:
-                item = QListWidgetItem(app_name)
-                item.setData(Qt.UserRole, {"ProcessName": app_name, "ProcessId": "0", "Type": "user"})
-                self.apps_list.addItem(item)
-        else:
-            # Sinon, utiliser les vraies applications trouvées
-            for app in apps_data:
-                item_text = app['ProcessName']
-                item = QListWidgetItem(item_text)
-                item.setData(Qt.UserRole, app)
-                self.apps_list.addItem(item)
+        # Stocker et afficher
+        self.all_user_apps = user_apps_filtered
         
-        # Mettre à jour le compteur pour correspondre à l'image (16 applications)
-        self.apps_count_label.setText("16 applications")
-        
-        # Masquer l'indicateur de chargement
-        self.apps_progress.setVisible(False)
-        self.statusBar().showMessage(f"Applications utilisateur trouvées et affichées.")
-    
-    def handle_user_apps_error(self, error):
-        """Gère les erreurs lors de la récupération des applications utilisateur"""
-        self.statusBar().showMessage(f"Erreur: {error}")
-        self.apps_progress.setVisible(False)
-        self.apps_list.clear()
-        
-        # Afficher quelques applications utilisateur de base
-        default_apps = [
-            {"ProcessName": "Firefox", "ProcessId": "0", "Type": "user"},
-            {"ProcessName": "Discord", "ProcessId": "0", "Type": "user"},
-            {"ProcessName": "Explorer", "ProcessId": "0", "Type": "user"}
-        ]
-        
-        self.all_user_apps = default_apps
-        
-        for app in default_apps:
-            item = QListWidgetItem(app['ProcessName'])
+        for app in user_apps_filtered:
+            if 'FriendlyName' in app:
+                display_name = app['FriendlyName']
+            else:
+                display_name = get_friendly_name(app['ProcessName'])
+            
+            item = QListWidgetItem(display_name)
             item.setData(Qt.UserRole, app)
             self.apps_list.addItem(item)
         
-        self.apps_count_label.setText(f"{len(default_apps)} applications")
-    
+        # Mettre à jour le compteur
+        actual_count = len(user_apps_filtered)
+        self.apps_count_label.setText(f"{actual_count} applications")
+        
+        self.apps_progress.setVisible(False)
+        self.statusBar().showMessage(f"{actual_count} applications utilisateur trouvées.")
+
     def filter_user_apps(self):
-        """Filtre les applications utilisateur en fonction du texte de recherche"""
+        """
+        Filtre les applications utilisateur en fonction du texte de recherche
+        """
         search_text = self.apps_search_edit.text().lower()
         
-        # Si pas de texte de recherche, afficher toutes les applications
-        if not hasattr(self, 'all_user_apps'):
+        if not hasattr(self, 'all_user_apps') or not self.all_user_apps:
             return
         
         self.apps_list.clear()
-        
         filtered_apps = []
+        
         for app in self.all_user_apps:
-            if search_text in app["ProcessName"].lower():
+            # Obtenir le nom d'affichage (friendly name ou nom technique)
+            if 'FriendlyName' in app:
+                display_name = app['FriendlyName']
+            else:
+                # Utiliser la fonction importée pour obtenir le nom compréhensible
+                display_name = get_friendly_name(app['ProcessName'])
+            
+            # Chercher dans le nom d'affichage ET le nom technique
+            technical_name = app['ProcessName']
+            
+            if (search_text in display_name.lower() or 
+                search_text in technical_name.lower()):
+                
                 filtered_apps.append(app)
-                item_text = app['ProcessName']
-                item = QListWidgetItem(item_text)
+                item = QListWidgetItem(display_name)
                 item.setData(Qt.UserRole, app)
                 self.apps_list.addItem(item)
         
-        # Mettre à jour le compteur avec le nombre d'applications filtrées
-        self.apps_count_label.setText(f"{len(filtered_apps)} applications")
+        # Mettre à jour le compteur
+        if search_text:
+            self.apps_count_label.setText(f"{len(filtered_apps)} applications (filtrées)")
+        else:
+            total_apps = len(self.all_user_apps) if hasattr(self, 'all_user_apps') else 0
+            self.apps_count_label.setText(f"{total_apps} applications")
     
     def refresh_system_processes(self):
         """
@@ -1253,7 +1244,9 @@ class NetPriorApp(QMainWindow):
             self.delete_button.setEnabled(True)
     
     def create_limit(self):
-        """Crée une nouvelle limite pour une application ou un processus système"""
+        """
+        Crée une nouvelle limite pour une application
+        """
         try:
             # Vérifier si une application est sélectionnée
             selected_user_apps = self.apps_list.selectedItems()
@@ -1262,47 +1255,57 @@ class NetPriorApp(QMainWindow):
             if selected_user_apps:
                 # Une application utilisateur est sélectionnée
                 selected_item = selected_user_apps[0]
-                # Récupérer les données de l'application
                 app_data = selected_item.data(Qt.UserRole)
+                
+                # ✅ UTILISER LE NOM TECHNIQUE pour les opérations QoS
+                technical_name = app_data["ProcessName"]  # Ex: "msedge.exe"
+                
+                # ✅ UTILISER LE NOM COMPRÉHENSIBLE pour l'affichage
+                if 'FriendlyName' in app_data:
+                    friendly_name = app_data['FriendlyName']
+                else:
+                    friendly_name = get_friendly_name(technical_name)
+                
                 app_type = "user"
                 type_display = "Utilisateur"
+                
             elif selected_system_procs:
                 # Un processus système est sélectionné
                 selected_item = selected_system_procs[0]
-                # Récupérer les données du processus
                 app_data = selected_item.data(Qt.UserRole)
+                technical_name = app_data["ProcessName"]
+                friendly_name = technical_name  # Les processus système gardent leur nom technique
                 app_type = "system"
                 type_display = "Système"
             else:
-                QMessageBox.warning(self, "Aucune sélection", "Veuillez sélectionner une application ou un processus système dans la liste.")
+                QMessageBox.warning(self, "Aucune sélection", "Veuillez sélectionner une application dans la liste.")
                 return
-            
-            # Extraire le nom de l'application
-            app_name = app_data["ProcessName"]
             
             # Demander la limite de bande passante
             limit_kbps, ok = QInputDialog.getInt(
                 self, "Limite de bande passante", 
-                f"Entrez la limite en Kbits/sec pour {app_name} ({type_display}):", 
+                f"Entrez la limite en Kbits/sec pour {friendly_name} ({type_display}):", 
                 500, 1, 100000, 100
             )
             
             if ok:
-                self.statusBar().showMessage(f"Application de la limite pour {app_name}...")
+                self.statusBar().showMessage(f"Application de la limite pour {friendly_name}...")
                 
-                # Utiliser un worker pour appliquer la limite en arrière-plan
-                worker = Worker(limit_application_bandwidth, app_name, limit_kbps)
+                # ✅ IMPORTANT: Utiliser le nom technique pour la QoS
+                worker = Worker(limit_application_bandwidth, technical_name, limit_kbps)
                 worker.signals.finished.connect(self.refresh_qos_rules)
                 worker.signals.error.connect(lambda error: self.handle_limit_error(error))
                 self.threadpool.start(worker)
                 
                 QMessageBox.information(self, "Limite en cours d'application", 
-                                      f"Limite de {limit_kbps} Kbits/sec en cours d'application à {app_name}.")
+                                      f"Limite de {limit_kbps} Kbits/sec en cours d'application à {friendly_name}.")
+                
         except Exception as e:
             error_details = traceback.format_exc()
             print(f"Erreur lors de la création d'une limite: {e}")
             print(error_details)
             QMessageBox.critical(self, "Erreur", f"Impossible d'appliquer la limite: {str(e)}")
+
     
     def handle_limit_error(self, error):
         """Gère les erreurs lors de l'application d'une limite"""

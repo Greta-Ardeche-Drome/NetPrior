@@ -9,102 +9,275 @@ import platform  # Module pour détecter l'OS utilisé
 import speedtest
 import sys
 import requests
+
+def get_friendly_app_names():
+    """
+    Dictionnaire pour convertir les noms techniques en noms compréhensibles
+    """
+    return {
+        # Navigateurs
+        'chrome.exe': '🌐 Google Chrome',
+        'firefox.exe': '🦊 Mozilla Firefox',
+        'msedge.exe': '🔷 Microsoft Edge',
+        'brave.exe': '🦁 Brave Browser',
+        'opera.exe': '🎭 Opera Browser',
+        'iexplore.exe': '🌐 Internet Explorer',
+        
+        # Éditeurs de code/texte
+        'code.exe': '⚡ Visual Studio Code',
+        'Code.exe': '⚡ Visual Studio Code',
+        'notepad.exe': '📝 Bloc-notes',
+        'notepad++.exe': '📝 Notepad++',
+        'sublime_text.exe': '📝 Sublime Text',
+        'atom.exe': '⚛️ Atom Editor',
+        'vim.exe': '📝 Vim Editor',
+        
+        # Communication
+        'discord.exe': '💬 Discord',
+        'Discord.exe': '💬 Discord',
+        'teams.exe': '👥 Microsoft Teams',
+        'zoom.exe': '📹 Zoom',
+        'skype.exe': '📞 Skype',
+        'slack.exe': '💼 Slack',
+        'whatsapp.exe': '💬 WhatsApp',
+        'telegram.exe': '✈️ Telegram',
+        
+        # Média
+        'spotify.exe': '🎵 Spotify',
+        'vlc.exe': '🎬 VLC Media Player',
+        'foobar2000.exe': '🎵 Foobar2000',
+        'winamp.exe': '🎵 Winamp',
+        'itunes.exe': '🎵 iTunes',
+        'netflix.exe': '🎬 Netflix',
+        'youtube.exe': '📺 YouTube',
+        
+        # Jeux
+        'steam.exe': '🎮 Steam',
+        'epicgameslauncher.exe': '🎮 Epic Games',
+        'origin.exe': '🎮 EA Origin',
+        'uplay.exe': '🎮 Ubisoft Connect',
+        'battle.net.exe': '🎮 Battle.net',
+        'minecraft.exe': '🧱 Minecraft',
+        
+        # Email
+        'outlook.exe': '📧 Microsoft Outlook',
+        'thunderbird.exe': '📧 Thunderbird',
+        'mailspring.exe': '📧 Mailspring',
+        
+        # Bureau/Productivité
+        'winword.exe': '📄 Microsoft Word',
+        'excel.exe': '📊 Microsoft Excel',
+        'powerpnt.exe': '📊 Microsoft PowerPoint',
+        'soffice.exe': '📄 LibreOffice',
+        'onenote.exe': '📔 OneNote',
+        'notion.exe': '📋 Notion',
+        
+        # Graphisme/Design
+        'photoshop.exe': '🎨 Adobe Photoshop',
+        'illustrator.exe': '🎨 Adobe Illustrator',
+        'gimp.exe': '🎨 GIMP',
+        'paint.exe': '🎨 Paint',
+        'mspaint.exe': '🎨 Paint',
+        'canva.exe': '🎨 Canva',
+        
+        # Système
+        'explorer.exe': '📁 Explorateur de fichiers',
+        'calculator.exe': '🧮 Calculatrice',
+        'calc.exe': '🧮 Calculatrice',
+        'cmd.exe': '⚫ Invite de commandes',
+        'powershell.exe': '🔷 PowerShell',
+        
+        # Développement
+        'python.exe': '🐍 Python',
+        'pythonw.exe': '🐍 Python',
+        'python3.11.exe': '🐍 Python 3.11',
+        'python3.11': '🐍 Python 3.11',
+        'java.exe': '☕ Java',
+        'node.exe': '🟢 Node.js',
+        'git.exe': '📂 Git',
+        'git-bash.exe': '📂 Git Bash',
+        
+        # Stockage/Cloud
+        'onedrive.exe': '☁️ OneDrive',
+        'googledrive.exe': '☁️ Google Drive',
+        'dropbox.exe': '☁️ Dropbox',
+        'sync.exe': '☁️ Sync',
+        
+        # Utilitaires
+        'everything.exe': '🔍 Everything',
+        'Everything.exe': '🔍 Everything',
+        'winrar.exe': '📦 WinRAR',
+        '7z.exe': '📦 7-Zip',
+        'wireshark.exe': '🌐 Wireshark',
+        'putty.exe': '🌐 PuTTY',
+        
+        # Sécurité
+        'protonvpn.exe': '🔒 ProtonVPN',
+        'ProtonVPN.exe': '🔒 ProtonVPN',
+        'nordvpn.exe': '🔒 NordVPN',
+        'expressvpn.exe': '🔒 ExpressVPN',
+        
+        # Applications spécifiques mentionnées dans votre interface
+        'NLClientApp.exe': '📱 NL Client App',
+        'NLClientApp': '📱 NL Client App',
+        'Photos.exe': '📷 Photos',
+        'GitHubDesktop.exe': '📂 GitHub Desktop',
+
+        'CompPkgSrv.exe': '📦 Service de packages Windows',
+        'RuntimeBroker.exe': '🔗 Gestionnaire d\'applications Windows',
+        'explorer.exe': '📁 Explorateur Windows',
+        'msedge.exe': '🌐 Microsoft Edge (processus)',
+        'WUDFSvc': '🔧 Service de pilotes Windows',
+        'svchost.exe': '⚙️ Service hôte Windows',
+        'bits.exe': '📥 Service de transfert Windows',
+        'OneDrive.exe': '☁️ OneDrive (synchronisation)',
+        'MsMpEng.exe': '🛡️ Windows Defender',
+        'WinStore.App.exe': '🏪 Microsoft Store (processus)',
+    }
+
+# ==========================================
+# FONCTION POUR CONVERTIR LES NOMS
+# ==========================================
+
+def get_friendly_name(process_name):
+    """
+    Convertit un nom de processus technique en nom compréhensible
+    
+    Args:
+        process_name (str): Nom technique du processus (ex: "msedge.exe")
+    
+    Returns:
+        str: Nom compréhensible (ex: "🔷 Microsoft Edge")
+    """
+    friendly_names = get_friendly_app_names()
+    
+    # Recherche exacte d'abord
+    if process_name in friendly_names:
+        return friendly_names[process_name]
+    
+    # Recherche sans .exe
+    name_without_exe = process_name.replace('.exe', '')
+    if name_without_exe in friendly_names:
+        return friendly_names[name_without_exe]
+    
+    # Recherche insensible à la casse
+    for tech_name, friendly_name in friendly_names.items():
+        if tech_name.lower() == process_name.lower():
+            return friendly_name
+    
+    # Si aucune correspondance, nettoyer le nom technique
+    clean_name = process_name.replace('.exe', '').replace('_', ' ').title()
+    
+    # Ajouter un icône générique selon le type
+    if any(keyword in process_name.lower() for keyword in ['browser', 'chrome', 'firefox', 'edge']):
+        return f"🌐 {clean_name}"
+    elif any(keyword in process_name.lower() for keyword in ['code', 'editor', 'notepad']):
+        return f"📝 {clean_name}"
+    elif any(keyword in process_name.lower() for keyword in ['game', 'steam', 'epic']):
+        return f"🎮 {clean_name}"
+    elif any(keyword in process_name.lower() for keyword in ['music', 'audio', 'media']):
+        return f"🎵 {clean_name}"
+    elif any(keyword in process_name.lower() for keyword in ['python', 'java', 'node']):
+        return f"💻 {clean_name}"
+    else:
+        return f"📱 {clean_name}"
 def list_user_launched_applications(display=True):
     """
-    Liste les applications utilisateur lancées sur Windows en utilisant PowerShell,
-    ainsi que les processus système susceptibles de consommer de la bande passante.
-    Regroupe les applications identiques pour n'afficher qu'une seule entrée par application.
+    Liste UNIQUEMENT les applications utilisateur lancées sur Windows.
+    Exclut complètement les processus système.
     
     Args:
         display (bool): Si True, affiche le résultat dans la console.
     
     Returns:
-        list: Liste des applications et processus sous forme de dictionnaire.
+        list: Liste des applications UTILISATEUR uniquement.
     """
     try:
-        print(Fore.BLUE + "🔍 Recherche des applications et processus réseau..." + Style.RESET_ALL)
+        if display:
+            print("🔍 Recherche des applications utilisateur...")
         
-        # 1. Récupération des applications utilisateur
+        # 1. UNIQUEMENT les applications utilisateur avec interface graphique
         user_apps_command = """
         Get-Process | Where-Object {
             ($_.MainWindowHandle -ne 0) -and 
-            ($_.StartInfo.UserName -notmatch '^(NT AUTHORITY|SYSTEM|LOCAL SERVICE|NETWORK SERVICE)$') -and 
-            ($_.MainWindowTitle -ne "")
-        } | Select-Object -Property Id, ProcessName | Sort-Object -Property ProcessName
+            ($_.MainWindowTitle -ne "") -and
+            ($_.ProcessName -notmatch '^(svchost|System|lsass|services|spoolsv|wininit|csrss|dwm|winlogon|audiodg|conhost|smss|MsMpEng|RuntimeBroker|WUDFSvc|WinStore|CompPkgSrv|bits|OneDrive|WUDFHost)$')
+        } | Select-Object -Property Id, ProcessName, MainWindowTitle | Sort-Object -Property ProcessName
         """
-        user_result = subprocess.run(["powershell", "-Command", user_apps_command], 
-                                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        user_result = subprocess.run(
+            ["powershell", "-Command", user_apps_command], 
+            text=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE
+        )
         
         if user_result.returncode != 0:
-            raise Exception(Fore.RED + f"Erreur PowerShell (applications utilisateur) : {user_result.stderr.strip()}" + Style.RESET_ALL)
+            raise Exception(f"Erreur PowerShell : {user_result.stderr.strip()}")
         
-        # 2. Récupération des processus système consommant de la bande passante
-        # Liste des processus système connus pour utiliser la bande passante
-        network_processes_command = """
-        Get-Process -Name svchost, System, lsass, services, spoolsv, wininit, csrss, explorer, 
-                         MsMpEng, OneDrive, Teams, Skype, Discord, Slack, Chrome, Edge, Firefox, 
-                         iexplore, Opera, Zoom, msedge, Dropbox, GoogleDrive, SynologyDrive, 
-                         Outlook, Thunderbird -ErrorAction SilentlyContinue | 
-        Where-Object { $_.Id -ne $null } | 
-        Select-Object -Property Id, ProcessName | 
-        Sort-Object -Property ProcessName
-        """
-        
-        sys_result = subprocess.run(["powershell", "-Command", network_processes_command], 
-                               text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Ne pas lever d'exception si aucun processus système n'est trouvé
-        
-        # Dictionnaires pour stocker les applications uniques
+        # Dictionnaire pour éviter les doublons
         unique_user_apps = {}
-        unique_system_processes = {}
         
-        # Traitement des applications utilisateur
+        # Traitement des applications utilisateur UNIQUEMENT
         user_lines = user_result.stdout.strip().splitlines()
-        for line in user_lines[3:]:  # Ignorer les en-têtes
+        for line in user_lines[3:]:  # Ignorer les en-têtes PowerShell
             parts = line.split()
-            if len(parts) >= 2:
+            if len(parts) >= 3:  # ID ProcessName MainWindowTitle
                 process_id = parts[0]
-                process_name = " ".join(parts[1:])
+                process_name = parts[1]
                 
-                if process_name not in unique_user_apps:
+                # Liste blanche des applications utilisateur courantes
+                user_app_patterns = [
+                    'chrome', 'firefox', 'edge', 'brave', 'opera',  # Navigateurs
+                    'code', 'notepad', 'wordpad', 'sublime', 'atom',  # Éditeurs
+                    'discord', 'teams', 'zoom', 'skype', 'slack',  # Communication
+                    'spotify', 'vlc', 'foobar', 'winamp',  # Média
+                    'steam', 'origin', 'epic', 'uplay',  # Jeux
+                    'outlook', 'thunderbird', 'mail',  # Email
+                    'word', 'excel', 'powerpoint', 'libreoffice',  # Bureau
+                    'photoshop', 'gimp', 'paint', 'mspaint',  # Graphisme
+                    'explorer',  # Explorateur de fichiers
+                    'calculator', 'calc',  # Calculatrice
+                    'python', 'java', 'node',  # Développement
+                ]
+                
+                # Vérifier si c'est une application utilisateur légitime
+                is_user_app = any(pattern.lower() in process_name.lower() 
+                                for pattern in user_app_patterns)
+                
+                # OU vérifier que ce n'est PAS un processus système
+                system_processes = [
+                    'svchost', 'system', 'lsass', 'services', 'spoolsv', 
+                    'wininit', 'csrss', 'dwm', 'winlogon', 'audiodg', 
+                    'conhost', 'smss', 'msmpeeng', 'runtimebroker', 
+                    'wudfsvc', 'winstore', 'comppkgsrv', 'bits', 'wudfhost'
+                ]
+                
+                is_system_process = any(sys_proc.lower() in process_name.lower() 
+                                      for sys_proc in system_processes)
+                
+                # Ajouter seulement si c'est une app utilisateur ET pas un processus système
+                if (process_name not in unique_user_apps and 
+                    not is_system_process and
+                    not process_name.lower().endswith('.scr')):  # Pas d'économiseurs d'écran
                     unique_user_apps[process_name] = process_id
         
-        # Traitement des processus système
-        if sys_result.returncode == 0:
-            sys_lines = sys_result.stdout.strip().splitlines()
-            for line in sys_lines[3:]:  # Ignorer les en-têtes
-                parts = line.split()
-                if len(parts) >= 2:
-                    process_id = parts[0]
-                    process_name = " ".join(parts[1:])
-                    
-                    # Éviter les doublons avec les applications utilisateur
-                    if process_name not in unique_user_apps and process_name not in unique_system_processes:
-                        unique_system_processes[process_name] = process_id
-        
-        # Créer les listes d'applications
-        user_app_list = [{"ProcessName": name, "ProcessId": pid, "Type": "user"} 
-                        for name, pid in unique_user_apps.items()]
-        
-        system_app_list = [{"ProcessName": name, "ProcessId": pid, "Type": "system"} 
-                          for name, pid in unique_system_processes.items()]
-        
-        # Combiner les deux listes
-        app_list = user_app_list + system_app_list
+        # Créer la liste finale - APPLICATIONS UTILISATEUR UNIQUEMENT
+        app_list = [{"ProcessName": name, "ProcessId": pid, "Type": "user"} 
+                   for name, pid in unique_user_apps.items()]
         
         if display:
-            table = PrettyTable()
-            table.field_names = ["N°", "Nom de l'application", "PID", "Type"]
-            for idx, app in enumerate(app_list, start=1):
-                app_type = "Utilisateur" if app["Type"] == "user" else "Système"
-                table.add_row([idx, app["ProcessName"], app["ProcessId"], app_type])
-            print(Fore.GREEN + str(table) + Style.RESET_ALL)
+            print(f"✅ Trouvé {len(app_list)} applications utilisateur")
+            for app in app_list:
+                print(f"  📱 {app['ProcessName']} (PID: {app['ProcessId']})")
         
         return app_list
+        
     except Exception as e:
-        print(Fore.RED + f"❌ Erreur lors de la récupération des applications : {e}" + Style.RESET_ALL)
+        if display:
+            print(f"❌ Erreur lors de la récupération des applications : {e}")
         return []
+
 def list_network_adapters():
     """
     Liste toutes les interfaces réseau disponibles sur le système.
