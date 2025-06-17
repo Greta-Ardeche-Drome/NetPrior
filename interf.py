@@ -1055,8 +1055,7 @@ class NetPriorApp(QMainWindow):
     
     def update_system_processes(self, processes):
         """
-        Met à jour la liste des processus système avec les données récupérées.
-        N'affiche pas le PID dans la liste principale.
+        Met à jour la liste des processus système avec des noms compréhensibles.
         Utilise la liste spécifique de la dernière capture d'écran.
         
         Args:
@@ -1083,9 +1082,11 @@ class NetPriorApp(QMainWindow):
         if not processes or len(processes) < 5:
             # Ajouter les processus spécifiques de notre liste exemplaire
             for proc_name in specific_apps:
-                item = QListWidgetItem(proc_name)
+                friendly_name = get_friendly_name(proc_name)
+                item = QListWidgetItem(friendly_name)
                 item.setData(Qt.UserRole, {
                     "ProcessName": proc_name,
+                    "FriendlyName": friendly_name,
                     "ProcessId": "N/A",
                     "Type": "system"
                 })
@@ -1099,15 +1100,23 @@ class NetPriorApp(QMainWindow):
                 matching_procs = [p for p in processes if p["ProcessName"].lower() == proc_name.lower()]
                 if matching_procs:
                     proc = matching_procs[0]
-                    item = QListWidgetItem(proc["ProcessName"])
-                    item.setData(Qt.UserRole, proc)
+                    friendly_name = get_friendly_name(proc["ProcessName"])
+                    item = QListWidgetItem(friendly_name)
+                    item.setData(Qt.UserRole, {
+                        "ProcessName": proc["ProcessName"],
+                        "FriendlyName": friendly_name,
+                        "ProcessId": proc["ProcessId"],
+                        "Type": "system"
+                    })
                     self.system_list.addItem(item)
                     added_processes.append(proc["ProcessName"].lower())
                 else:
                     # Ajouter un processus factice si non trouvé
-                    item = QListWidgetItem(proc_name)
+                    friendly_name = get_friendly_name(proc_name)
+                    item = QListWidgetItem(friendly_name)
                     item.setData(Qt.UserRole, {
                         "ProcessName": proc_name,
+                        "FriendlyName": friendly_name,
                         "ProcessId": "N/A",
                         "Type": "system"
                     })
@@ -1119,7 +1128,7 @@ class NetPriorApp(QMainWindow):
         
         # Masquer la barre de progression
         self.system_progress.setVisible(False)
-        self.statusBar().showMessage("Processus système affichés.")
+        self.statusBar().showMessage("Processus système affichés avec noms compréhensibles.")
     
     def handle_system_error(self, error):
         """
