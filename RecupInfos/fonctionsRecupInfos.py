@@ -10,6 +10,19 @@ import speedtest
 import sys
 import requests
 
+# Import conditionnel de speedtest avec gestion d'erreur
+SPEEDTEST_AVAILABLE = False
+try:
+    import speedtest
+    SPEEDTEST_AVAILABLE = True
+    print("✅ Module speedtest-cli chargé avec succès")
+except ImportError as e:
+    print(f"⚠ Module speedtest-cli non disponible: {e}")
+    SPEEDTEST_AVAILABLE = False
+except Exception as e:
+    print(f"⚠ Erreur lors du chargement de speedtest-cli: {e}")
+    SPEEDTEST_AVAILABLE = False
+
 def get_friendly_app_names():
     """
     Dictionnaire pour convertir les noms techniques en noms compréhensibles
