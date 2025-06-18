@@ -376,6 +376,118 @@ def get_app_path(app_name):
         print(f"❌ Erreur lors de la récupération du chemin de l'application : {e}")
     return None  # Retourner None si l'application n'a pas été trouvée
 
+def get_network_bandwidth2(selected_adapter_index=None):
+    """
+    Mesure la bande passante d'une carte réseau en utilisant speedtest-cli Python.
+    
+    Args:
+        selected_adapter_index (int, optional): Index de l'adaptateur à utiliser. Si None, utilise l'interface par défaut.
+    
+    Returns:
+        dict: Résultats du test de vitesse
+    """
+    try:
+        print(Fore.BLUE + "🚀 Initialisation du test speedtest-cli Python..." + Style.RESET_ALL)
+        
+        # Sélection de l'interface réseau
+        selected_interface_name = "Auto"
+        selected_interface_ip = None
+        
+        # Si un index d'adaptateur est fourni, essayer de l'utiliser
+        if selected_adapter_index is not None:
+            adapters = list_network_adapters()
+            if adapters and 1 <= selected_adapter_index <= len(adapters):
+                selected_interface_name = adapters[selected_adapter_index - 1]
+                
+                # Obtenir l'IP de l'interface sélectionnée
+                try:
+                    # Utiliser psutil pour obtenir l'IP de l'interface
+                    import psutil
+                    import socket
+                    
+                    addrs = psutil.net_if_addrs()
+                    if selected_interface_name in addrs:
+                        for addr in addrs[selected_interface_name]:
+                            if addr.family == socket.AF_INET:  # IPv4
+                                selected_interface_ip = addr.address
+                                break
+                except Exception as e:
+                    print(Fore.YELLOW + f"⚠ Impossible d'obtenir l'IP de l'interface: {e}" + Style.RESET_ALL)
+        
+        print(Fore.GREEN + f"\nInterface sélectionnée : {selected_interface_name}" + Style.RESET_ALL)
+        if selected_interface_ip:
+            print(Fore.GREEN + f"IP de l'interface : {selected_interface_ip}" + Style.RESET_ALL)
+        
+        # Créer l'objet speedtest avec ou sans interface spécifique
+        import speedtest
+        
+        if selected_interface_ip and selected_interface_name != "Auto":
+            print(Fore.CYAN + f"🔧 Configuration pour l'interface: {selected_interface_name}" + Style.RESET_ALL)
+            st = speedtest.Speedtest(source_address=selected_interface_ip)
+        else:
+            print(Fore.CYAN + "🔧 Configuration automatique (interface par défaut)" + Style.RESET_ALL)
+            st = speedtest.Speedtest()
+        
+        print(Fore.CYAN + "📡 Recherche du meilleur serveur..." + Style.RESET_ALL)
+        # Obtenir la liste des serveurs et sélectionner le meilleur
+        st.get_best_server()
+        
+        print(f"Serveur sélectionné: {st.results.server['sponsor']} - {st.results.server['name']}")
+        print(f"Distance: {st.results.server['d']:.2f} km")
+        print(f"Pays: {st.results.server['country']} - {st.results.server['cc']}")
+        
+        print(Fore.YELLOW + "📥 Test de téléchargement..." + Style.RESET_ALL)
+        download_speed = st.download()
+        download_mbps = download_speed / 1_000_000  # Convertir en Mbps
+        
+        print(Fore.YELLOW + "📤 Test d'upload..." + Style.RESET_ALL)
+        upload_speed = st.upload()
+        upload_mbps = upload_speed / 1_000_000  # Convertir en Mbps
+        
+        # Ping est déjà calculé lors de get_best_server()
+        ping = st.results.ping
+        
+        print(Fore.GREEN + "\n" + "="*50)
+        print(f"📥 Download: {download_mbps:.2f} Mbps")
+        print(f"📤 Upload: {upload_mbps:.2f} Mbps") 
+        print(f"🏓 Ping: {ping:.2f} ms")
+        print(f"🌐 Interface: {selected_interface_name}")
+        print("="*50 + Style.RESET_ALL)
+        
+        return {
+            "adapter": selected_interface_name,
+            "download_mbps": round(download_mbps, 2),
+            "upload_mbps": round(upload_mbps, 2),
+            "latency": round(ping, 2),
+            "server": st.results.server['sponsor'],
+            "location": st.results.server['name'],
+            "country": st.results.server['country']
+        }
+        
+    except ImportError:
+        print(Fore.RED + "❌ Module speedtest-cli non installé. Installez-le avec: pip install speedtest-cli" + Style.RESET_ALL)
+        return {}
+    except speedtest.ConfigRetrievalError:
+        print(Fore.RED + "❌ Erreur de configuration réseau" + Style.RESET_ALL)
+        print(Fore.CYAN + "💡 Suggestions :" + Style.RESET_ALL)
+        print("   - Vérifiez votre connexion Internet")
+        print("   - Désactivez temporairement votre VPN")
+        return {}
+    except speedtest.NoMatchedServers:
+        print(Fore.RED + "❌ Aucun serveur speedtest trouvé" + Style.RESET_ALL)
+        print(Fore.CYAN + "💡 Suggestions :" + Style.RESET_ALL)
+        print("   - Vérifiez votre connexion Internet")
+        print("   - Réessayez dans quelques minutes")
+        return {}
+    except Exception as e:
+        print(Fore.RED + f"❌ Erreur lors de la mesure de la bande passante : {e}" + Style.RESET_ALL)
+        print(Fore.CYAN + "💡 Suggestions :" + Style.RESET_ALL)
+        print("   - Désactivez temporairement votre VPN")
+        print("   - Sélectionnez une interface réseau physique (Ethernet/WiFi)")
+        print("   - Vérifiez votre connexion Internet")
+        return {}
+
+get_network_bandwidth = get_network_bandwidth2
 if __name__ == "__main__":
     print("Ce fichier contient des fonctions et n'est pas destiné à être exécuté directement.")
-    get_network_bandwidth()
+    #get_network_bandwidth2()
