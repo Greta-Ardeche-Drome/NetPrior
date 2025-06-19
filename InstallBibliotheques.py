@@ -8,7 +8,8 @@ REQUIRED_LIBRARIES = [
     "psutil",
     "pyfiglet",
     "speedtest-cli",
-    "requests"
+    "requests",
+    "PyQt5"
 ]
 
 def install_packages():
